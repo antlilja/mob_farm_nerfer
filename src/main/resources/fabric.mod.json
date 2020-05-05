@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "mob_farm_nerfer",
-  "version": "1.0.0",
+  "version": "2.0.0",
 
   "name": "Mob farm nerfer",
   "description": "This mod nerfs mob farms",
@@ -15,6 +15,9 @@
   "icon": "assets/mob_farm_nerfer/icon.png",
 
   "environment": "*",
+  "entrypoints": {
+    "main": ["com.github.signekatt.MobFarmNerfer"]
+  },
   "mixins": ["mob_farm_nerfer.mixins.json"],
 
   "depends": {

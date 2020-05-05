@@ -1,6 +1,6 @@
 package com.github.signekatt.mixin;
 
-import com.github.signekatt.LivingEntityExt;
+import com.github.signekatt.MobFarmNerfer;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -13,11 +13,11 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
 
 @Mixin(LivingEntity.class)
-public abstract class LivingEntityMixin extends Entity implements LivingEntityExt {
+public abstract class LivingEntityMixin extends Entity {
 
     public LivingEntityMixin(EntityType<?> type, World world) {
         super(type, world);
@@ -29,28 +29,32 @@ public abstract class LivingEntityMixin extends Entity implements LivingEntityEx
     @Shadow
     protected float lastDamageTaken;
 
-    private boolean mob_farm_nerfer_isSpawnerMob = false;
-
-    public void mob_farm_nerfer_setIsSpawnerMob(boolean val) {
-        this.mob_farm_nerfer_isSpawnerMob = val;
-    }
-
-    @Inject(at = @At("HEAD"), method = "dropXp", cancellable = true)
-    protected void onDropXp(CallbackInfo info) {
+    @Inject(at = @At("HEAD"), method = "drop", cancellable = true)
+    protected void onDrop(CallbackInfo info) {
         LivingEntity entity = (LivingEntity) (Object) this;
-        if (this.mob_farm_nerfer_isSpawnerMob || (!(entity instanceof PlayerEntity) && lastDamageSource != null
-                && lastDamageSource == DamageSource.FALL && lastDamageTaken >= (entity.getMaximumHealth() / 2.0F))) {
-            info.cancel();
+        // If the entity is a player we always want to drop xp and inventory
+        if (!entity.world.isClient && !(entity instanceof PlayerEntity)) {
+            // Checks for falling damage
+            if (MobFarmNerfer.FALL_DAMAGE_THRESHOLD > 0.0F) {
+                boolean lastDamageFall = lastDamageSource != null && lastDamageSource == DamageSource.FALL;
+                if (lastDamageFall
+                        && lastDamageTaken >= (entity.getMaximumHealth() * MobFarmNerfer.FALL_DAMAGE_THRESHOLD)) {
+                    info.cancel();
+                }
+            }
+
+            // Checks for mob crowding
+            if (MobFarmNerfer.CROWDING_THRESHOLD > 0 && MobFarmNerfer.CROWDING_RADIUS > 0) {
+                int radius = MobFarmNerfer.CROWDING_RADIUS;
+                int entityCount = entity.world.getEntities(LivingEntity.class,
+                        new Box(entity.getBlockPos().down(radius).west(radius).north(radius),
+                                entity.getBlockPos().up(radius).east(radius).south(radius)),
+                        null).size();
+
+                if (entityCount >= MobFarmNerfer.CROWDING_THRESHOLD) {
+                    info.cancel();
+                }
+            }
         }
-    }
-
-    @Inject(at = @At("RETURN"), method = "writeCustomDataToTag")
-    public void onWriteCustomDataToTag(CompoundTag tag, CallbackInfo info) {
-        tag.putBoolean("mob_farm_nerfer_IsSpawnerMob", this.mob_farm_nerfer_isSpawnerMob);
-    }
-
-    @Inject(at = @At("RETURN"), method = "readCustomDataFromTag")
-    public void onReadCustomDataFromTag(CompoundTag tag, CallbackInfo info) {
-        this.mob_farm_nerfer_isSpawnerMob = tag.getBoolean("mob_farm_nerfer_IsSpawnerMob");
     }
 }
