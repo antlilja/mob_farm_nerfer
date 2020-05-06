@@ -3,7 +3,7 @@
   "minVersion": "0.8",
   "package": "com.github.signekatt.mixin",
   "compatibilityLevel": "JAVA_8",
-  "mixins": ["LivingEntityMixin"],
+  "mixins": ["HostileEntityMixin"],
   "injectors": {
     "defaultRequire": 1
   }
