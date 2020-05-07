@@ -12,6 +12,7 @@ public class MobFarmNerfer implements ModInitializer {
     public static float FALL_DAMAGE_THRESHOLD = 0.5F;
     public static int CROWDING_THRESHOLD = 5;
     public static int CROWDING_RADIUS = 3;
+    public static int MAX_PATH_CHECKING_DISTANCE = 25;
 
     @Override
     public void onInitialize() {
@@ -31,6 +32,10 @@ public class MobFarmNerfer implements ModInitializer {
 
                 if (props.containsKey("crowding_radius")) {
                     CROWDING_RADIUS = Integer.parseInt(props.getProperty("crowding_radius"));
+                }
+
+                if (props.containsKey("max_path_checking_distance")) {
+                    MAX_PATH_CHECKING_DISTANCE = Integer.parseInt(props.getProperty("max_path_checking_distance"));
                 }
                 inputStream.close();
             } catch (IOException e) {

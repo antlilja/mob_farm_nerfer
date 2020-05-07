@@ -7,11 +7,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.MobEntityWithAi;
 import net.minecraft.entity.mob.Monster;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -64,6 +67,23 @@ public class HostileEntityMixin extends MobEntityWithAi implements Monster {
                     info.setReturnValue(false);
                     info.cancel();
                     return;
+                }
+            }
+
+            // Checks if mob can reach player
+            if (MobFarmNerfer.MAX_PATH_CHECKING_DISTANCE > 0) {
+                Entity attacker = thisP.getAttacker();
+                if (attacker instanceof PlayerEntity) {
+                    int distance = (int) attacker.distanceTo(thisP);
+                    if (distance < MobFarmNerfer.MAX_PATH_CHECKING_DISTANCE) {
+                        Path path = thisP.getNavigation().findPathTo(attacker.getBlockPos(), distance);
+                        if (path != null && !path.reachesTarget()) {
+                            mob_farm_nerfer_PrevDeathCalc = 0;
+                            info.setReturnValue(false);
+                            info.cancel();
+                            return;
+                        }
+                    }
                 }
             }
 
