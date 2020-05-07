@@ -42,6 +42,7 @@ public class HostileEntityMixin extends MobEntityWithAi implements Monster {
             if (mob_farm_nerfer_FallDamageTaken >= maxFallDamage) {
                 info.setReturnValue(false);
                 info.cancel();
+                    return;
             }
         }
 
@@ -57,6 +58,7 @@ public class HostileEntityMixin extends MobEntityWithAi implements Monster {
             if (entityCount >= MobFarmNerfer.CROWDING_THRESHOLD) {
                 info.setReturnValue(false);
                 info.cancel();
+                    return;
             }
         }
     }
