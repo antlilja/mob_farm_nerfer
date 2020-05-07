@@ -24,6 +24,7 @@ public class HostileEntityMixin extends MobEntityWithAi implements Monster {
         super(type, world);
     }
 
+    private int mob_farm_nerfer_PrevDeathCalc = -1;
     private float mob_farm_nerfer_FallDamageTaken = 0.0F;
 
     @Inject(at = @At("HEAD"), method = "damage")
@@ -35,31 +36,41 @@ public class HostileEntityMixin extends MobEntityWithAi implements Monster {
 
     @Inject(at = @At("HEAD"), method = "canDropLootAndXp", cancellable = true)
     protected void onCanDropLootAndXp(CallbackInfoReturnable<Boolean> info) {
-        HostileEntity thisP = (HostileEntity) (Object) this;
-        // Checks for falling damage
-        if (MobFarmNerfer.FALL_DAMAGE_THRESHOLD > 0.0F) {
-            float maxFallDamage = thisP.getMaximumHealth() * MobFarmNerfer.FALL_DAMAGE_THRESHOLD;
-            if (mob_farm_nerfer_FallDamageTaken >= maxFallDamage) {
-                info.setReturnValue(false);
-                info.cancel();
+        // If value was previously calculated we don't have to do it again
+        if (mob_farm_nerfer_PrevDeathCalc == -1) {
+            HostileEntity thisP = (HostileEntity) (Object) this;
+            // Checks for falling damage
+            if (MobFarmNerfer.FALL_DAMAGE_THRESHOLD > 0.0F) {
+                float maxFallDamage = thisP.getMaximumHealth() * MobFarmNerfer.FALL_DAMAGE_THRESHOLD;
+                if (mob_farm_nerfer_FallDamageTaken >= maxFallDamage) {
+                    mob_farm_nerfer_PrevDeathCalc = 0;
+                    info.setReturnValue(false);
+                    info.cancel();
                     return;
+                }
             }
-        }
 
-        // Checks for mob crowding
-        if (MobFarmNerfer.CROWDING_THRESHOLD > 0 && MobFarmNerfer.CROWDING_RADIUS > 0) {
-            int radius = MobFarmNerfer.CROWDING_RADIUS;
-            BlockPos blockPos = thisP.getBlockPos();
-            int entityCount = thisP.world
-                    .getEntities(HostileEntity.class, new Box(blockPos.down(radius).west(radius).north(radius),
-                            blockPos.up(radius).east(radius).south(radius)), null)
-                    .size();
+            // Checks for mob crowding
+            if (MobFarmNerfer.CROWDING_THRESHOLD > 0 && MobFarmNerfer.CROWDING_RADIUS > 0) {
+                int radius = MobFarmNerfer.CROWDING_RADIUS;
+                BlockPos blockPos = thisP.getBlockPos();
+                int entityCount = thisP.world
+                        .getEntities(HostileEntity.class, new Box(blockPos.down(radius).west(radius).north(radius),
+                                blockPos.up(radius).east(radius).south(radius)), null)
+                        .size();
 
-            if (entityCount >= MobFarmNerfer.CROWDING_THRESHOLD) {
-                info.setReturnValue(false);
-                info.cancel();
+                if (entityCount >= MobFarmNerfer.CROWDING_THRESHOLD) {
+                    mob_farm_nerfer_PrevDeathCalc = 0;
+                    info.setReturnValue(false);
+                    info.cancel();
                     return;
+                }
             }
+
+            mob_farm_nerfer_PrevDeathCalc = 1;
+        } else if (mob_farm_nerfer_PrevDeathCalc == 0) {
+            info.setReturnValue(false);
+            info.cancel();
         }
     }
 
