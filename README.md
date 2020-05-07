@@ -14,7 +14,7 @@ Options can be specified in a *mob_farm_nerfer.properties* file.
 
 - *crowding_threshold* specifies the amount of mobs in an area that is considered crowded
 
-- *crowding_radius specifies* the radius of the area that entities look in around them to find the amount of entities
+- *crowding_radius* specifies the radius of the area that entities look in around them to find the amount of entities
 
  
 
