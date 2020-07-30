@@ -12,7 +12,7 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ai.pathing.Path;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.mob.MobEntityWithAi;
+import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.mob.Monster;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.CompoundTag;
@@ -21,9 +21,9 @@ import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
 
 @Mixin(HostileEntity.class)
-public class HostileEntityMixin extends MobEntityWithAi implements Monster {
+public class HostileEntityMixin extends PathAwareEntity implements Monster {
 
-    protected HostileEntityMixin(EntityType<? extends MobEntityWithAi> type, World world) {
+    protected HostileEntityMixin(EntityType<? extends PathAwareEntity> type, World world) {
         super(type, world);
     }
 
@@ -37,19 +37,16 @@ public class HostileEntityMixin extends MobEntityWithAi implements Monster {
         }
     }
 
-    @Inject(at = @At("HEAD"), method = "canDropLootAndXp", cancellable = true)
-    protected void onCanDropLootAndXp(CallbackInfoReturnable<Boolean> info) {
+    private boolean shouldDrop() {
         // If value was previously calculated we don't have to do it again
         if (mob_farm_nerfer_PrevDeathCalc == -1) {
             HostileEntity thisP = (HostileEntity) (Object) this;
             // Checks for falling damage
             if (MobFarmNerfer.FALL_DAMAGE_THRESHOLD > 0.0F) {
-                float maxFallDamage = thisP.getMaximumHealth() * MobFarmNerfer.FALL_DAMAGE_THRESHOLD;
+                float maxFallDamage = thisP.getMaxHealth() * MobFarmNerfer.FALL_DAMAGE_THRESHOLD;
                 if (mob_farm_nerfer_FallDamageTaken >= maxFallDamage) {
                     mob_farm_nerfer_PrevDeathCalc = 0;
-                    info.setReturnValue(false);
-                    info.cancel();
-                    return;
+                    return false;
                 }
             }
 
@@ -64,9 +61,7 @@ public class HostileEntityMixin extends MobEntityWithAi implements Monster {
 
                 if (entityCount >= MobFarmNerfer.CROWDING_THRESHOLD) {
                     mob_farm_nerfer_PrevDeathCalc = 0;
-                    info.setReturnValue(false);
-                    info.cancel();
-                    return;
+                    return false;
                 }
             }
 
@@ -79,9 +74,7 @@ public class HostileEntityMixin extends MobEntityWithAi implements Monster {
                         Path path = thisP.getNavigation().findPathTo(attacker.getBlockPos(), distance);
                         if (path != null && !path.reachesTarget()) {
                             mob_farm_nerfer_PrevDeathCalc = 0;
-                            info.setReturnValue(false);
-                            info.cancel();
-                            return;
+                            return false;
                         }
                     }
                 }
@@ -89,9 +82,22 @@ public class HostileEntityMixin extends MobEntityWithAi implements Monster {
 
             mob_farm_nerfer_PrevDeathCalc = 1;
         } else if (mob_farm_nerfer_PrevDeathCalc == 0) {
-            info.setReturnValue(false);
-            info.cancel();
+            return false;
         }
+
+        return true;
+    }
+
+    @Inject(at = @At("HEAD"), method = "canDropLootAndXp", cancellable = true)
+    protected void onCanDropLootAndXp(CallbackInfoReturnable<Boolean> info) {
+        info.setReturnValue(shouldDrop());
+        info.cancel();
+    }
+
+    @Inject(at = @At("HEAD"), method = "shouldDropLoot", cancellable = true)
+    protected void onShouldDropLoot(CallbackInfoReturnable<Boolean> info) {
+        info.setReturnValue(shouldDrop());
+        info.cancel();
     }
 
     @Override
