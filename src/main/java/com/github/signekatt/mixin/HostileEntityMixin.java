@@ -15,7 +15,8 @@ import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.mob.Monster;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.util.TypeFilter;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
@@ -29,13 +30,6 @@ public class HostileEntityMixin extends PathAwareEntity implements Monster {
 
     private int mob_farm_nerfer_PrevDeathCalc = -1;
     private float mob_farm_nerfer_FallDamageTaken = 0.0F;
-
-    @Inject(at = @At("HEAD"), method = "damage")
-    public void onDamage(DamageSource source, float amount, CallbackInfoReturnable<Boolean> info) {
-        if (source == DamageSource.FALL) {
-            mob_farm_nerfer_FallDamageTaken += amount;
-        }
-    }
 
     private boolean shouldDrop() {
         // If value was previously calculated we don't have to do it again
@@ -55,8 +49,8 @@ public class HostileEntityMixin extends PathAwareEntity implements Monster {
                 int radius = MobFarmNerfer.CROWDING_RADIUS;
                 BlockPos blockPos = thisP.getBlockPos();
                 int entityCount = thisP.world
-                        .getEntities(HostileEntity.class, new Box(blockPos.down(radius).west(radius).north(radius),
-                                blockPos.up(radius).east(radius).south(radius)), null)
+                        .getEntitiesByType(TypeFilter.instanceOf(HostileEntity.class), new Box(blockPos.down(radius).west(radius).north(radius),
+                                blockPos.up(radius).east(radius).south(radius)), Entity::isAlive)
                         .size();
 
                 if (entityCount >= MobFarmNerfer.CROWDING_THRESHOLD) {
@@ -64,7 +58,7 @@ public class HostileEntityMixin extends PathAwareEntity implements Monster {
                     return false;
                 }
             }
-
+            
             // Checks if mob can reach player
             if (MobFarmNerfer.MAX_PATH_CHECKING_DISTANCE > 0) {
                 Entity attacker = thisP.getAttacker();
@@ -88,8 +82,8 @@ public class HostileEntityMixin extends PathAwareEntity implements Monster {
         return true;
     }
 
-    @Inject(at = @At("HEAD"), method = "canDropLootAndXp", cancellable = true)
-    protected void onCanDropLootAndXp(CallbackInfoReturnable<Boolean> info) {
+    @Inject(at = @At("HEAD"), method = "shouldDropXp", cancellable = true)
+    protected void onShouldDropXp(CallbackInfoReturnable<Boolean> info) {
         info.setReturnValue(shouldDrop());
         info.cancel();
     }
@@ -101,15 +95,25 @@ public class HostileEntityMixin extends PathAwareEntity implements Monster {
     }
 
     @Override
-    public void writeCustomDataToTag(CompoundTag tag) {
-        tag.putFloat("mob_farm_nerfer_FallDamageTaken", mob_farm_nerfer_FallDamageTaken);
-        super.writeCustomDataToTag(tag);
+    public boolean damage(DamageSource source, float amount) {
+        boolean result = super.damage(source, amount);
+
+        if(result && source == DamageSource.FALL) {
+            mob_farm_nerfer_FallDamageTaken += amount;
+        }
+
+        return result;
     }
 
     @Override
-    public void readCustomDataFromTag(CompoundTag tag) {
-        mob_farm_nerfer_FallDamageTaken = tag.getFloat("mob_farm_nerfer_FallDamageTaken");
-        super.readCustomDataFromTag(tag);
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        nbt.putFloat("mob_farm_nerfer_FallDamageTaken", mob_farm_nerfer_FallDamageTaken);
+        super.writeCustomDataToNbt(nbt);
     }
 
+    @Override
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        mob_farm_nerfer_FallDamageTaken = nbt.getFloat("mob_farm_nerfer_FallDamageTaken");
+        super.readCustomDataFromNbt(nbt);
+    }
 }

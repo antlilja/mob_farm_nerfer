@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "mob_farm_nerfer",
-  "version": "2.2.0",
+  "version": "${version}",
 
   "name": "Mob farm nerfer",
   "description": "This mod nerfs mob farms",
@@ -21,11 +21,9 @@
   "mixins": ["mob_farm_nerfer.mixins.json"],
 
   "depends": {
-    "fabricloader": ">=0.8.2",
+    "fabricloader": ">=0.11.3",
     "fabric": "*",
-    "minecraft": "1.16.x"
-  },
-  "suggests": {
-    "flamingo": "*"
+    "minecraft": "1.17.x",
+    "java": ">=16"
   }
 }
